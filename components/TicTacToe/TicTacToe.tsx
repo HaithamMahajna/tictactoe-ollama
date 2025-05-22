@@ -9,6 +9,7 @@ interface GameState {
   winner: Player;
   isGameOver: boolean;
   lastMove?: number;
+  winningLine?: number[];
 }
 
 interface GameMessage {
@@ -23,6 +24,7 @@ const TicTacToe = () => {
     currentPlayer: 'X',
     winner: null,
     isGameOver: false,
+    winningLine: undefined,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -39,16 +41,17 @@ const TicTacToe = () => {
     return rows.join('\n---------\n');
   };
 
-  const checkWinner = (board: Player[]): Player => {
+  const checkWinner = (board: Player[]): { winner: Player; line: number[] } | null => {
     const lines = [
       [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
       [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
       [0, 4, 8], [2, 4, 6] // diagonals
     ];
 
-    for (const [a, b, c] of lines) {
+    for (const line of lines) {
+      const [a, b, c] = line;
       if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-        return board[a];
+        return { winner: board[a], line };
       }
     }
     return null;
@@ -75,16 +78,17 @@ const TicTacToe = () => {
       content: `Player X moved to position ${index}`
     }]);
 
-    const winner = checkWinner(newBoard);
-    if (winner) {
+    const winnerResult = checkWinner(newBoard);
+    if (winnerResult) {
       setGameState(prev => ({
         ...prev,
-        winner,
-        isGameOver: true
+        winner: winnerResult.winner,
+        isGameOver: true,
+        winningLine: winnerResult.line
       }));
       setMessages(prev => [...prev, {
         type: 'system',
-        content: `Game Over! ${winner} wins!`
+        content: `Game Over! ${winnerResult.winner} wins!`
       }]);
       return;
     }
@@ -110,7 +114,9 @@ const TicTacToe = () => {
 ${formatBoard(newBoard)}
 
 The player (X) just moved to position ${index}.
-Please analyze the board and make your move. Respond with ONLY a number from 0-8 representing your move.
+Available positions are: ${newBoard.map((cell, i) => cell === null ? i : null).filter(pos => pos !== null).join(', ')}.
+
+Please analyze the board and make your move. Respond with ONLY a number from the available positions listed above.
 Remember:
 - 0-2 is the top row
 - 3-5 is the middle row
@@ -165,16 +171,17 @@ Remember:
             content: `Ollama (O) moved to position ${ollamaMove}`
           }]);
 
-          const newWinner = checkWinner(updatedBoard);
-          if (newWinner) {
+          const newWinnerResult = checkWinner(updatedBoard);
+          if (newWinnerResult) {
             setGameState(prev => ({
               ...prev,
-              winner: newWinner,
-              isGameOver: true
+              winner: newWinnerResult.winner,
+              isGameOver: true,
+              winningLine: newWinnerResult.line
             }));
             setMessages(prev => [...prev, {
               type: 'system',
-              content: `Game Over! ${newWinner} wins!`
+              content: `Game Over! ${newWinnerResult.winner} wins!`
             }]);
           } else if (!updatedBoard.includes(null)) {
             setGameState(prev => ({
@@ -211,64 +218,104 @@ Remember:
       currentPlayer: 'X',
       winner: null,
       isGameOver: false,
+      winningLine: undefined,
     });
     setMessages([]);
   };
 
+  const getWinningLineStyle = (line: number[]) => {
+    if (line[0] === 0 && line[1] === 1 && line[2] === 2) return 'top-[16.66%] h-[6px] w-full bg-red-500 animate-pulse z-10 shadow-lg';
+    if (line[0] === 3 && line[1] === 4 && line[2] === 5) return 'top-[50%] h-[6px] w-full bg-red-500 animate-pulse z-10 shadow-lg';
+    if (line[0] === 6 && line[1] === 7 && line[2] === 8) return 'bottom-[16.66%] h-[6px] w-full bg-red-500 animate-pulse z-10 shadow-lg';
+    if (line[0] === 0 && line[1] === 3 && line[2] === 6) return 'left-[16.66%] w-[6px] h-full bg-red-500 animate-pulse z-10 shadow-lg';
+    if (line[0] === 1 && line[1] === 4 && line[2] === 7) return 'left-[50%] w-[6px] h-full bg-red-500 animate-pulse z-10 shadow-lg';
+    if (line[0] === 2 && line[1] === 5 && line[2] === 8) return 'right-[16.66%] w-[6px] h-full bg-red-500 animate-pulse z-10 shadow-lg';
+    if (line[0] === 0 && line[1] === 4 && line[2] === 8) return 'w-[141%] h-[6px] top-[50%] left-[-20%] transform rotate-45 bg-red-500 animate-pulse z-10 shadow-lg';
+    if (line[0] === 2 && line[1] === 4 && line[2] === 6) return 'w-[141%] h-[6px] top-[50%] left-[-20%] transform -rotate-45 bg-red-500 animate-pulse z-10 shadow-lg';
+    return '';
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center p-4">
-      <h2 className="text-2xl font-bold mb-4">
-        {gameState.isGameOver
-          ? gameState.winner
-            ? `Winner: ${gameState.winner}`
-            : "It's a draw!"
-          : `Current Player: ${gameState.currentPlayer}`}
-      </h2>
-      
-      <div className="grid grid-cols-3 gap-2 bg-gray-200 p-2 rounded-lg mb-4">
-        {gameState.board.map((cell, index) => (
-          <button
-            key={index}
-            className={`w-20 h-20 bg-white rounded-lg text-4xl font-bold 
-              ${cell ? 'cursor-not-allowed' : 'hover:bg-gray-100'}
-              ${isLoading ? 'opacity-50' : ''}
-              ${gameState.lastMove === index ? 'ring-2 ring-blue-500' : ''}`}
-            onClick={() => handleCellClick(index)}
-            disabled={!!cell || gameState.isGameOver || isLoading}
-          >
-            {cell}
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 p-8">
+      <div className="max-w-7xl w-full flex flex-col items-center">
+        <h1 className="text-5xl font-bold mb-12 text-center">
+          <span className="bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+            Tic Tac Toe
+          </span>
+          <span className="text-white mx-4">vs</span>
+          <span className="bg-gradient-to-r from-green-400 to-teal-500 text-transparent bg-clip-text">
+            Ollama
+          </span>
+        </h1>
 
-      <div className="w-full max-w-md bg-gray-100 rounded-lg p-4 mb-4">
-        <h3 className="text-lg font-semibold mb-2">Game Log:</h3>
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`p-2 rounded ${
-                msg.type === 'player'
-                  ? 'bg-blue-100'
-                  : msg.type === 'ollama'
-                  ? 'bg-green-100'
-                  : 'bg-gray-200'
-              }`}
-            >
-              {msg.content}
+        <h2 className="text-3xl font-bold mb-8 text-center">
+          <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-transparent bg-clip-text">
+            {gameState.isGameOver
+              ? gameState.winner
+                ? `🎉 Winner: ${gameState.winner} 🎉`
+                : "🤝 It's a draw! 🤝"
+              : `Current Player: ${gameState.currentPlayer}`}
+          </span>
+        </h2>
+        
+        <div className="flex gap-12 items-start">
+          <div className="relative grid grid-cols-3 gap-3 bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-xl backdrop-blur-sm border border-gray-700/50">
+            {gameState.winningLine && (
+              <div className={`absolute ${getWinningLineStyle(gameState.winningLine)}`} style={{ boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)' }} />
+            )}
+            {gameState.board.map((cell, index) => (
+              <button
+                key={index}
+                className={`w-28 h-28 bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-xl text-6xl font-bold transition-all duration-200
+                  ${cell ? 'cursor-not-allowed' : 'hover:from-gray-700/80 hover:to-gray-800/80 hover:scale-105'}
+                  ${isLoading ? 'opacity-50' : ''}
+                  ${gameState.lastMove === index ? 'ring-4 ring-blue-500' : ''}
+                  ${cell === 'X' ? 'text-blue-400' : cell === 'O' ? 'text-red-400' : ''}
+                  shadow-lg backdrop-blur-sm border border-gray-700/30 relative z-0`}
+                onClick={() => handleCellClick(index)}
+                disabled={!!cell || gameState.isGameOver || isLoading}
+              >
+                {cell}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-96 bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700/50">
+            <h3 className="text-2xl font-semibold mb-4 bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">
+              Game Log:
+            </h3>
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg shadow-sm backdrop-blur-sm border border-gray-700/30 ${
+                    msg.type === 'player'
+                      ? 'bg-gradient-to-r from-blue-900/30 to-blue-800/30 text-blue-200'
+                      : msg.type === 'ollama'
+                      ? 'bg-gradient-to-r from-green-900/30 to-green-800/30 text-green-200'
+                      : 'bg-gradient-to-r from-gray-800/30 to-gray-900/30 text-gray-200'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-      </div>
 
-      {gameState.isGameOver && (
-        <button
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-          onClick={resetGame}
-        >
-          Play Again
-        </button>
-      )}
+        {gameState.isGameOver && (
+          <div className="flex justify-center mt-8">
+            <button
+              className="px-8 py-4 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white rounded-xl 
+                hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200
+                shadow-lg font-semibold text-lg"
+              onClick={resetGame}
+            >
+              Play Again
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
