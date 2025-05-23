@@ -18,7 +18,7 @@ export default async function handler(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mistral',
+        model: 'gemma3:1b',
         messages: messages,
         stream: false,
         options: {
