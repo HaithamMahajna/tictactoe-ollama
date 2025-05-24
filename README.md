@@ -6,7 +6,6 @@ tictactoe Ollama is an open source chat UI for Ollama.
 
 
 
-
 ## Running Locally
 
 ### 1. Clone Repo
