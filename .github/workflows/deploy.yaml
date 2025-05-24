@@ -1,5 +1,5 @@
 # The name of the workflow
-name: rictactoe Deploy
+name: tictactoe Deploy
 
 on:
   # The workflow will run when a push is made to branch `main`
@@ -52,26 +52,26 @@ jobs:
         run: |
           # Clone repository if it doesn't exist, otherwise pull latest changes
           ssh ec2 "if [ -d ~/${REPO_NAME} ]; then cd ~/${REPO_NAME} && git pull --no-rebase; else git clone ${REPO_URL} ~/${REPO_NAME}; fi"
-      - name: Create polybot.service file
+      - name: Create nextjs.service file
         run: |
-          cat <<EOF > polybot.service
+          cat <<EOF > nextjs.service
           [Unit]
-          Description=poly bot Service
+          Description=Next.js App
           After=network.target
           [Service]
+          Type=simple
           User=ubuntu
-          WorkingDirectory=/home/ubuntu/polybot
-          ExecStart=/home/ubuntu/polybot/venv/bin/python3 -m polybot.app
-          Environment=TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          Environment=BOT_APP_URL=https://haitham.fursa.click
-          Environment=YOLO_SERVER_URL=${{ secrets.YOLO_SERVER_URL }}
-          Restart=always
+          WorkingDirectory=/home/ubuntu/tictactoe-ollama
+          EExecStart=/usr/bin/npm start
+          Restart=on-failure
+          Environment=PORT=3000
+          Environment=NODE_ENV=production
           [Install]
           WantedBy=multi-user.target
           EOF
 
 
-      - name: Copy polybot.service to EC2
+      - name: Copy nextjs.service to EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
@@ -81,9 +81,9 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/private_key
           chmod 600 ~/.ssh/private_key
-          scp -i ~/.ssh/private_key -o StrictHostKeyChecking=no polybot.service $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/
+          scp -i ~/.ssh/private_key -o StrictHostKeyChecking=no nextjs.service $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/
           ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << EOF
-          sudo mv /home/$EC2_USERNAME/polybot.service /etc/systemd/system/polybot.service
+          sudo mv /home/$EC2_USERNAME/nextjs.service /etc/systemd/system/nextjs.service
           EOF
 
       - name: Execute script on EC2

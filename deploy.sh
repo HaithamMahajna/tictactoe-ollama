@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 echo "Starting deployment..."
-cd /home/ubuntu/tictactoe
+cd /home/ubuntu/tictactoe-ollama
 git pull origin main
 npm install
 npm run build
