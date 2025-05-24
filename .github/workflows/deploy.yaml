@@ -62,7 +62,7 @@ jobs:
           Type=simple
           User=ubuntu
           WorkingDirectory=/home/ubuntu/tictactoe-ollama
-          EExecStart=/usr/bin/npm start
+          ExecStart=/usr/bin/npm start
           Restart=on-failure
           Environment=PORT=3000
           Environment=NODE_ENV=production
