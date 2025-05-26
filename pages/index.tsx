@@ -42,7 +42,7 @@ export default function GameHub() {
         <div className="max-w-7xl mx-auto">
           <h1 className="text-5xl font-bold text-center mb-4">
             <span className="bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-              Game Hub
+              FUCK YOU ZAROURA
             </span>
           </h1>
           <p className="text-xl text-gray-400 text-center mb-12">
