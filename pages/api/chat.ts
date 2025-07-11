@@ -10,7 +10,7 @@ export default async function handler(
 
   try {
     const { model,messages } = req.body;
-    const OLLAMA_HOST = 'http://10.0.1.31:11434'; // Ollama server private IP and port
+    const OLLAMA_HOST = 'http://10.0.0.227:11434'; // Ollama server private IP and port
 
     const response = await fetch(`${OLLAMA_HOST}/api/chat`, {
       method: 'POST',
