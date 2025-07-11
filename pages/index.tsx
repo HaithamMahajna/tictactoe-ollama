@@ -6,7 +6,7 @@ const games = [
     id: 'tictactoe',
     name: 'Tic Tac Toe',
     description: 'Play against Ollama AI in a classic game of Tic Tac Toe',
-    icon: '❌⭕',
+    icon: '❌AND⭕',
     status: 'Available',
     path: '/tictactoe'
   },
